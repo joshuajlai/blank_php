@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-class Task {
+class Task extends Base
+{
     /**
     * PDO object
     * @var \PDO
@@ -15,7 +16,8 @@ class Task {
     * Initialize the object with a specified PDO object
     * @param \PDO $connection
     */
-    public function __construct(\App\SQLiteConnection $connection) {
+    public function __construct(\App\SQLiteConnection $connection)
+    {
         $this->connection = $connection;
         $this->pdo = $connection->getConnection();
     }
@@ -29,7 +31,13 @@ class Task {
     * @param type $projectId
     * @return int id of the inserted task
     */
-    public function insertTask($taskName, $startDate, $completedDate, $completed, $projectId) {
+    public function insertTask(
+        $taskName,
+        $startDate,
+        $completedDate,
+        $completed,
+        $projectId
+    ) {
         $sql = "
             INSERT INTO tasks
                 (task_name,start_date,completed_date,completed,project_id)
@@ -51,37 +59,34 @@ class Task {
         return $this->findTaskById($taskId);
     }
 
+    public function findTasks($properties)
+    {
+        $query = "
+            select *
+            from tasks
+        ";
+
+        $query .= $this->generateWhere($properties);
+        return $this->connection->query($query, array_values($properties));
+    }
+
     public function findTask($taskName, $projectId) {
-        $query = "
-            select *
-            from tasks
-            where task_name = :name
-            and project_id = :projectId
-        ";
-        $params = [
-            ':name' => $taskName,
-            ':projectId' => $projectId,
-        ];
-        $data = $this->connection->query($query, $params);
+        $data = $this->findTasks([
+            'task_name' => $taskName,
+            'project_id' => $projectId,
+        ]);
 
         return current($data);
     }
 
-    public function findTaskById($taskId) {
-        $query = "
-            select *
-            from tasks
-            where task_id = :taskId
-        ";
-        $params = [
-            ':taskId' => $taskId,
-        ];
-        $data = $this->connection->query($query, $params);
-
+    public function findTaskById($taskId)
+    {
+        $data = $this->findTasks(['task_id' => $taskId]);
         return current($data);
     }
 
-    public function updateTask($taskId, $properties) {
+    public function updateTask($taskId, $properties)
+    {
         $query = "
             UPDATE tasks
             SET
@@ -97,5 +102,16 @@ class Task {
         $stmt->execute($stmt_values);
 
         return $this->findTaskById($taskId);
+    }
+
+    public function deleteTasks($properties)
+    {
+        $query = "
+            delete
+            from tasks
+        ";
+        $query .= $this->generateWhere($properties);
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute(array_values($properties));
     }
 }

@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-class Project {
+class Project extends Base
+{
 
     /**
     * PDO object
@@ -16,7 +17,8 @@ class Project {
     * Initialize the object with a specified PDO object
     * @param \PDO $pdo
     */
-    public function __construct(\App\SQLiteConnection $connection) {
+    public function __construct(\App\SQLiteConnection $connection)
+    {
         $this->pdo = $connection->getConnection();
         $this->connection = $connection;
     }
@@ -26,7 +28,8 @@ class Project {
     * @param string $projectName
     * @return the id of the new project
     */
-    public function insertProject($projectName) {
+    public function insertProject($projectName)
+    {
         $sql = 'INSERT INTO projects(project_name) VALUES(:project_name)';
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':project_name', $projectName);
@@ -37,31 +40,40 @@ class Project {
         return $this->findProjectById($projectId);
     }
 
-    public function findProject($projectName) {
+    public function findProjects($properties)
+    {
         $query = "
             select *
             from projects
-            where project_name = :projectName
         ";
-        $params = [
-            ':projectName' => $projectName,
-        ];
-        $data = $this->connection->query($query, $params);
+        $query .= $this->generateWhere($properties);
+
+        return $this->connection->query($query, array_values($properties));
+    }
+
+    public function findProject($projectName)
+    {
+        $data = $this->findProjects(['project_name' => $projectName]);
 
         return current($data);
     }
 
-    public function findProjectById($projectId) {
-        $query = "
-            select *
-            from projects
-            where project_id = :projectId
-        ";
-        $params = [
-            ':projectId' => $projectId,
-        ];
-        $data = $this->connection->query($query, $params);
+    public function findProjectById($projectId)
+    {
+        $data = $this->findProjects(['project_id' => $projectId]);
 
         return current($data);
+    }
+
+    public function deleteProjects($properties)
+    {
+        $query = "
+            delete
+            from projects
+        ";
+
+        $query .= $this->generateWhere($properties);
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute(array_values($properties));
     }
 }
